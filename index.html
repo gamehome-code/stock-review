@@ -14,18 +14,9 @@
   <!-- ECharts -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <script>
-    // 先注销旧Service Worker，清除所有缓存，再注册新版
+    // 注册Service Worker（会自动清除旧缓存并更新）
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-      });
-      caches.keys().then(keys => {
-        keys.forEach(k => caches.delete(k));
-      });
-      // 延迟注册新版SW，确保旧版已注销
-      setTimeout(() => {
-        navigator.serviceWorker.register('/sw.js?v=2');
-      }, 1000);
+      navigator.serviceWorker.register('/sw.js');
     }
   </script>
 </head>
