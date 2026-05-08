@@ -10,18 +10,22 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=2">
   <!-- ECharts -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <script>
-    // 清除旧版Service Worker缓存，确保加载最新代码
+    // 先注销旧Service Worker，清除所有缓存，再注册新版
     if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
       caches.keys().then(keys => {
-        keys.forEach(k => { if (k !== 'stock-review-v2') caches.delete(k); });
+        keys.forEach(k => caches.delete(k));
       });
-      navigator.serviceWorker.register('/sw.js').then(reg => {
-        reg.update();
-      });
+      // 延迟注册新版SW，确保旧版已注销
+      setTimeout(() => {
+        navigator.serviceWorker.register('/sw.js?v=2');
+      }, 1000);
     }
   </script>
 </head>
@@ -318,13 +322,13 @@
   </nav>
 
   <!-- Scripts -->
-  <script src="/js/api.js"></script>
-  <script src="/js/market.js"></script>
-  <script src="/js/technical.js"></script>
-  <script src="/js/fundamental.js"></script>
-  <script src="/js/trade-log.js"></script>
-  <script src="/js/sentiment.js"></script>
-  <script src="/js/app.js"></script>
+  <script src="/js/api.js?v=2"></script>
+  <script src="/js/market.js?v=2"></script>
+  <script src="/js/technical.js?v=2"></script>
+  <script src="/js/fundamental.js?v=2"></script>
+  <script src="/js/trade-log.js?v=2"></script>
+  <script src="/js/sentiment.js?v=2"></script>
+  <script src="/js/app.js?v=2"></script>
 
 </body>
 </html>
