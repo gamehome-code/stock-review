@@ -8,6 +8,7 @@ const Market = {
   async init() {
     await this.loadIndexData();
     await this.loadSectorData();
+    await this.loadLimitList();
     this.bindEvents();
   },
 

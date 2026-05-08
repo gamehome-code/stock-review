@@ -1,59 +1,18 @@
 /**
  * A股复盘助手 - API数据层
- * 使用东方财富等免费公开接口获取数据
- * 无网络时自动使用模拟数据展示
+ *
+ * 东方财富等接口在GitHub Pages上因CORS限制无法直接访问
+ * 当前版本使用模拟数据展示完整功能
+ * 如需实时数据，请部署到支持后端代理的服务器
  */
 
 const API = {
-  BASE_URL: 'https://push2.eastmoney.com/api/qt',
-  DATA_URL: 'https://datacenter-web.eastmoney.com/api/data/v1/get',
+  _useMock: true,
+  _mockReason: '演示模式（API存在跨域限制）',
 
-  // 是否使用mock数据
-  _useMock: false,
-  _mockReason: '',
-  _ready: false,
-
-  // 初始化：快速检测API是否可达（1.5秒超时）
+  // 初始化（无需网络探测）
   async init() {
-    if (this._ready) return;
-    this._ready = true;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1500);
-      const resp = await fetch(`${this.BASE_URL}/ulist.np/get?fltt=2&fields=f2&secids=1.000001`, {
-        signal: controller.signal,
-        mode: 'cors'
-      });
-      clearTimeout(timer);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const data = await resp.json();
-      if (!data || !data.data) throw new Error('No data');
-      console.log('API连接正常，使用实时数据');
-    } catch (err) {
-      this._useMock = true;
-      this._mockReason = '接口受限，使用模拟数据';
-      console.log('API不可达，切换到模拟数据:', err.message);
-    }
-  },
-
-  // 通用请求
-  async fetch(url, params = {}) {
-    if (this._useMock) return null;
-    const query = new URLSearchParams(params).toString();
-    const fullUrl = query ? `${url}?${query}` : url;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(fullUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      return await resp.json();
-    } catch (err) {
-      this._useMock = true;
-      this._mockReason = '请求失败';
-      console.warn('API fetch failed:', err.message);
-      return null;
-    }
+    console.log('📊 A股复盘助手：使用模拟数据模式');
   },
 
   // 获取数据源状态
@@ -63,17 +22,6 @@ const API = {
 
   // ===== 大盘指数 =====
   async getIndexData() {
-    const data = await this.fetch(`${this.BASE_URL}/ulist.np/get`, {
-      fltt: 2, fields: 'f2,f3,f4,f12,f14',
-      secids: '1.000001,0.399001,0.399006,1.000688,0.399005,1.000300'
-    });
-    if (!data || !data.data?.diff) return this._mockIndices();
-    return data.data.diff.map(i => ({
-      code: i.f12, name: i.f14, price: i.f2,
-      changePercent: i.f3, changeAmount: i.f4
-    }));
-  },
-  _mockIndices() {
     return [
       { code: '000001', name: '上证指数', price: 3350.28, changePercent: 0.85, changeAmount: 28.35 },
       { code: '399001', name: '深证成指', price: 10856.42, changePercent: 1.12, changeAmount: 120.15 },
@@ -86,77 +34,55 @@ const API = {
 
   // ===== 板块涨跌 =====
   async getSectorData(type = 'industry') {
-    const fs = type === 'industry' ? 'm:90+t:2' : 'm:90+t:3';
-    const data = await this.fetch(`${this.BASE_URL}/clist.np/get`, {
-      pn: 1, pz: 20, po: 1, np: 1, fltt: 2, fs, fields: 'f2,f3,f4,f12,f14'
-    });
-    if (!data || !data.data?.diff) return this._mockSectors(type);
-    return data.data.diff.map(i => ({
-      code: i.f12, name: i.f14, price: i.f2,
-      changePercent: i.f3, changeAmount: i.f4
-    }));
-  },
-  _mockSectors(type) {
     if (type === 'industry') return [
-      { code:'BK0477', name:'半导体', changePercent:3.25 }, { code:'BK0478', name:'新能源', changePercent:2.18 },
-      { code:'BK0479', name:'人工智能', changePercent:2.87 }, { code:'BK0480', name:'医药生物', changePercent:1.56 },
-      { code:'BK0481', name:'消费电子', changePercent:1.23 }, { code:'BK0482', name:'汽车整车', changePercent:0.89 },
-      { code:'BK0483', name:'银行', changePercent:-0.35 }, { code:'BK0484', name:'房地产', changePercent:-1.28 },
-      { code:'BK0485', name:'白酒', changePercent:0.67 }, { code:'BK0486', name:'军工', changePercent:1.45 },
-      { code:'BK0487', name:'光伏', changePercent:-0.78 }, { code:'BK0488', name:'锂电池', changePercent:1.92 },
-      { code:'BK0489', name:'证券', changePercent:0.45 }, { code:'BK0490', name:'保险', changePercent:-0.56 },
-      { code:'BK0491', name:'钢铁', changePercent:-0.92 }
-    ].map(s => ({ ...s, price: 0, changeAmount: 0 }));
+      { code:'BK0477', name:'半导体', changePercent:3.25, price:0, changeAmount:0 },
+      { code:'BK0478', name:'新能源', changePercent:2.18, price:0, changeAmount:0 },
+      { code:'BK0479', name:'人工智能', changePercent:2.87, price:0, changeAmount:0 },
+      { code:'BK0480', name:'医药生物', changePercent:1.56, price:0, changeAmount:0 },
+      { code:'BK0481', name:'消费电子', changePercent:1.23, price:0, changeAmount:0 },
+      { code:'BK0482', name:'汽车整车', changePercent:0.89, price:0, changeAmount:0 },
+      { code:'BK0483', name:'银行', changePercent:-0.35, price:0, changeAmount:0 },
+      { code:'BK0484', name:'房地产', changePercent:-1.28, price:0, changeAmount:0 },
+      { code:'BK0485', name:'白酒', changePercent:0.67, price:0, changeAmount:0 },
+      { code:'BK0486', name:'军工', changePercent:1.45, price:0, changeAmount:0 },
+      { code:'BK0487', name:'光伏', changePercent:-0.78, price:0, changeAmount:0 },
+      { code:'BK0488', name:'锂电池', changePercent:1.92, price:0, changeAmount:0 },
+      { code:'BK0489', name:'证券', changePercent:0.45, price:0, changeAmount:0 },
+      { code:'BK0490', name:'保险', changePercent:-0.56, price:0, changeAmount:0 },
+      { code:'BK0491', name:'钢铁', changePercent:-0.92, price:0, changeAmount:0 }
+    ];
     return [
-      { code:'BK0901', name:'华为概念', changePercent:3.56 }, { code:'BK0902', name:'ChatGPT', changePercent:2.89 },
-      { code:'BK0903', name:'机器人', changePercent:2.34 }, { code:'BK0904', name:'低空经济', changePercent:1.78 },
-      { code:'BK0905', name:'固态电池', changePercent:-0.45 }, { code:'BK0906', name:'量子科技', changePercent:1.23 },
-      { code:'BK0907', name:'卫星导航', changePercent:0.89 }, { code:'BK0908', name:'碳中和', changePercent:-1.12 },
-      { code:'BK0909', name:'元宇宙', changePercent:0.56 }, { code:'BK0910', name:'数字经济', changePercent:1.67 }
-    ].map(s => ({ ...s, price: 0, changeAmount: 0 }));
+      { code:'BK0901', name:'华为概念', changePercent:3.56, price:0, changeAmount:0 },
+      { code:'BK0902', name:'ChatGPT', changePercent:2.89, price:0, changeAmount:0 },
+      { code:'BK0903', name:'机器人', changePercent:2.34, price:0, changeAmount:0 },
+      { code:'BK0904', name:'低空经济', changePercent:1.78, price:0, changeAmount:0 },
+      { code:'BK0905', name:'固态电池', changePercent:-0.45, price:0, changeAmount:0 },
+      { code:'BK0906', name:'量子科技', changePercent:1.23, price:0, changeAmount:0 },
+      { code:'BK0907', name:'卫星导航', changePercent:0.89, price:0, changeAmount:0 },
+      { code:'BK0908', name:'碳中和', changePercent:-1.12, price:0, changeAmount:0 },
+      { code:'BK0909', name:'元宇宙', changePercent:0.56, price:0, changeAmount:0 },
+      { code:'BK0910', name:'数字经济', changePercent:1.67, price:0, changeAmount:0 }
+    ];
   },
 
   // ===== 个股搜索 =====
   async searchStock(keyword) {
-    const data = await this.fetch('https://searchapi.eastmoney.com/api/suggest/get', {
-      input: keyword, type: 14, token: 'D43BF722C8E33BDC906FB84D85E326E8', count: 10
-    });
-    if (!data || !data.QuotationCodeTable?.Data) return this._mockSearch(keyword);
-    return data.QuotationCodeTable.Data.filter(item =>
-      item.SecurityTypeName === 'A股' || item.MktNum === '0' || item.MktNum === '1'
-    ).map(item => ({
-      code: item.Code, name: item.Name, market: item.MktNum === '0' ? 1 : 0
-    }));
-  },
-  _mockSearch(keyword) {
     const stocks = [
       { code:'600519', name:'贵州茅台', market:1 }, { code:'000858', name:'五粮液', market:0 },
       { code:'300750', name:'宁德时代', market:0 }, { code:'601318', name:'中国平安', market:1 },
       { code:'000001', name:'平安银行', market:0 }, { code:'600036', name:'招商银行', market:1 },
       { code:'002594', name:'比亚迪', market:0 }, { code:'601012', name:'隆基绿能', market:1 },
-      { code:'300059', name:'东方财富', market:0 }, { code:'600900', name:'长江电力', market:1 }
+      { code:'300059', name:'东方财富', market:0 }, { code:'600900', name:'长江电力', market:1 },
+      { code:'601899', name:'紫金矿业', market:1 }, { code:'000333', name:'美的集团', market:0 },
+      { code:'600276', name:'恒瑞医药', market:1 }, { code:'002475', name:'立讯精密', market:0 },
+      { code:'603259', name:'药明康德', market:1 }, { code:'000725', name:'京东方A', market:0 }
     ];
+    if (!keyword) return stocks.slice(0, 8);
     return stocks.filter(s => s.name.includes(keyword) || s.code.includes(keyword));
   },
 
   // ===== 个股K线 =====
   async getStockKline(secid, klt = 101, count = 120) {
-    const data = await this.fetch(`${this.BASE_URL}/stock/kline/get`, {
-      secid, fields1: 'f1,f2,f3,f4,f5,f6',
-      fields2: 'f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61',
-      klt, fqt: 1, beg: 0, end: 20500101, lmt: count
-    });
-    if (!data || !data.data?.klines) return this._mockKline(count);
-    return data.data.klines.map(line => {
-      const p = line.split(',');
-      return {
-        date: p[0], open: +p[1], close: +p[2], high: +p[3], low: +p[4],
-        volume: +p[5], amount: +p[6], amplitude: +p[7],
-        changePercent: +p[8], changeAmount: +p[9], turnover: +p[10]
-      };
-    });
-  },
-  _mockKline(count) {
     const klines = [];
     let price = 50 + Math.random() * 100;
     for (let i = 0; i < count; i++) {
@@ -182,50 +108,36 @@ const API = {
 
   // ===== 个股实时行情 =====
   async getStockQuote(secid) {
-    const data = await this.fetch(`${this.BASE_URL}/stock/get`, {
-      secid, fields: 'f43,f44,f45,f46,f47,f48,f50,f51,f52,f55,f57,f58,f60,f116,f117,f162,f167,f168,f169,f170,f171,f292'
-    });
-    if (!data || !data.data) return this._mockQuote(secid);
-    const d = data.data;
-    return {
-      code: d.f57, name: d.f58,
-      price: d.f43 / 1000, open: d.f46 / 1000,
-      high: d.f44 / 1000, low: d.f45 / 1000,
-      preClose: d.f60 / 1000, volume: d.f47, amount: d.f48,
-      changePercent: d.f170 / 100, changeAmount: d.f169 / 100,
-      turnover: d.f168 / 100, pe: d.f167, pb: d.f162,
-      totalValue: d.f116, floatValue: d.f117
-    };
-  },
-  _mockQuote(secid) {
     const code = secid ? secid.split('.')[1] : '600519';
-    const names = {'600519':'贵州茅台','000858':'五粮液','300750':'宁德时代','601318':'中国平安','000001':'上证指数'};
+    const names = {'600519':'贵州茅台','000858':'五粮液','300750':'宁德时代','601318':'中国平安',
+                   '000001':'平安银行','600036':'招商银行','002594':'比亚迪','601012':'隆基绿能',
+                   '300059':'东方财富','600900':'长江电力'};
+    const name = names[code] || '示例股票';
+    const basePrice = { '600519':1688,'000858':156,'300750':198,'601318':48,'000001':12.5,
+                        '600036':35,'002594':265,'601012':22,'300059':18,'600900':28 };
+    const p = basePrice[code] || (20 + Math.random() * 100);
+    const changeP = (Math.random() - 0.45) * 4;
     return {
-      code, name: names[code] || '示例股票',
-      price: 25.68, open: 25.20, high: 26.15, low: 25.05,
-      preClose: 25.10, volume: 156800, amount: 4025000,
-      changePercent: 2.31, changeAmount: 0.58,
-      turnover: 1.85, pe: 28.5, pb: 4.2,
-      totalValue: 51200000000, floatValue: 38500000000
+      code, name,
+      price: +(p * (1 + changeP/100)).toFixed(2),
+      open: +p.toFixed(2),
+      high: +(p * 1.02).toFixed(2),
+      low: +(p * 0.98).toFixed(2),
+      preClose: +p.toFixed(2),
+      volume: Math.floor(100000 + Math.random() * 500000),
+      amount: Math.floor(5000000 + Math.random() * 20000000),
+      changePercent: +changeP.toFixed(2),
+      changeAmount: +(p * changeP / 100).toFixed(2),
+      turnover: +(Math.random() * 5).toFixed(2),
+      pe: +(10 + Math.random() * 50).toFixed(1),
+      pb: +(1 + Math.random() * 8).toFixed(1),
+      totalValue: Math.floor(p * 1e8 * (10 + Math.random() * 100)),
+      floatValue: Math.floor(p * 1e8 * (5 + Math.random() * 50))
     };
   },
 
   // ===== 资金流向 =====
   async getMoneyFlow(secid) {
-    const data = await this.fetch('https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get', {
-      lmt: 10, klt: 101, secid, fields1: 'f1,f2,f3', fields2: 'f51,f52,f53,f54,f55,f56'
-    });
-    if (!data || !data.data?.klines) return this._mockMoneyFlow();
-    return data.data.klines.map(line => {
-      const p = line.split(',');
-      return {
-        date: p[0], mainIn: +p[1], mainOut: +p[2], mainNet: +p[3],
-        superIn: +p[4], superOut: +p[5], bigIn: +p[4], bigOut: +p[5],
-        midIn: +p[6], midOut: +p[7], smallIn: +p[8], smallOut: +p[9]
-      };
-    });
-  },
-  _mockMoneyFlow() {
     const result = [];
     for (let i = 9; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
@@ -239,19 +151,6 @@ const API = {
 
   // ===== 涨停/跌停 =====
   async getLimitList(type = 'zt') {
-    const data = await this.fetch(`${this.BASE_URL}/clist.np/get`, {
-      pn: 1, pz: 30, po: 1, np: 1, fltt: 2,
-      fs: 'm:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048',
-      fields: 'f2,f3,f4,f12,f14'
-    });
-    if (!data || !data.data?.diff) return this._mockLimitList(type);
-    const list = data.data.diff;
-    if (type === 'zt') {
-      return list.filter(i => i.f3 >= 9.8).map(i => ({ code:i.f12, name:i.f14, price:i.f2, changePercent:i.f3 }));
-    }
-    return list.filter(i => i.f3 <= -9.8).map(i => ({ code:i.f12, name:i.f14, price:i.f2, changePercent:i.f3 }));
-  },
-  _mockLimitList(type) {
     const isUp = type === 'zt';
     return [
       { code:'300888', name:'稳健医疗', price:58.90, changePercent: isUp?10.02:-10.01 },
@@ -264,17 +163,6 @@ const API = {
 
   // ===== 北向资金 =====
   async getNorthFlow() {
-    const data = await this.fetch('https://push2.eastmoney.com/api/qt/kamt.rtmin/get', {
-      fields1: 'f1,f2,f3', fields2: 'f51,f52,f53,f54,f55,f56'
-    });
-    if (!data || !data.data) return this._mockNorthFlow();
-    const d = data.data;
-    return {
-      buyAmount: d.s2nBuyAmount, sellAmount: d.s2nSellAmount, netAmount: d.s2nNetAmount,
-      series: d.s2n ? d.s2n.map(item => ({ time: item.split(',')[0], net: +item.split(',')[1] })) : []
-    };
-  },
-  _mockNorthFlow() {
     const series = [];
     for (let h = 9; h <= 15; h++) {
       for (let m = 0; m < 60; m += 30) {
@@ -293,16 +181,6 @@ const API = {
 
   // ===== 全球指数 =====
   async getGlobalIndices() {
-    const data = await this.fetch(`${this.BASE_URL}/ulist.np/get`, {
-      fltt: 2, fields: 'f2,f3,f4,f12,f14',
-      secids: '100.DJIA,100.NDX,100.SPX,100.N225,100.HSI,100.FTSE,100.DAX,100.GDAXI'
-    });
-    if (!data || !data.data?.diff) return this._mockGlobalIndices();
-    return data.data.diff.map(i => ({
-      code: i.f12, name: i.f14, price: i.f2, changePercent: i.f3
-    }));
-  },
-  _mockGlobalIndices() {
     return [
       { code:'DJIA', name:'道琼斯', price:42568.32, changePercent:0.45 },
       { code:'NDX', name:'纳斯达克', price:18956.78, changePercent:1.23 },
@@ -316,25 +194,16 @@ const API = {
 
   // ===== VIX =====
   async getVIX() {
-    const data = await this.fetch(`${this.BASE_URL}/stock/get`, {
-      secid: '100.VIX', fields: 'f43,f44,f45,f46,f47,f48,f57,f58,f170,f169'
-    });
-    if (!data || !data.data) return { name:'VIX', price:16.85, changePercent:-3.25, changeAmount:-0.57 };
-    const d = data.data;
-    return { name: d.f58, price: d.f43 / 1000, changePercent: d.f170 / 100, changeAmount: d.f169 / 100 };
+    return { name:'VIX', price:16.85, changePercent:-3.25, changeAmount:-0.57 };
   },
 
   // ===== 个股基本面 =====
   async getStockFinance(secid) {
-    const data = await this.fetch(`${this.BASE_URL}/stock/get`, {
-      secid, fields: 'f43,f44,f45,f46,f47,f48,f57,f58,f162,f167,f168,f169,f170,f116,f117'
-    });
-    if (!data || !data.data) return this._mockQuote(secid);
-    const d = data.data;
+    const quote = await this.getStockQuote(secid);
     return {
-      name: d.f58, code: d.f57, price: d.f43 / 1000,
-      pe: d.f167, pb: d.f162, totalValue: d.f116, floatValue: d.f117,
-      turnover: d.f168 / 100, changePercent: d.f170 / 100
+      name: quote.name, code: quote.code, price: quote.price,
+      pe: quote.pe, pb: quote.pb, totalValue: quote.totalValue, floatValue: quote.floatValue,
+      turnover: quote.turnover, changePercent: quote.changePercent
     };
   },
 
