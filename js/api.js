@@ -8,29 +8,50 @@ const API = {
   BASE_URL: 'https://push2.eastmoney.com/api/qt',
   DATA_URL: 'https://datacenter-web.eastmoney.com/api/data/v1/get',
 
-  // 是否强制使用mock数据（首次CORS失败后自动标记）
+  // 是否使用mock数据
   _useMock: false,
   _mockReason: '',
+  _ready: false,
 
-  // 通用请求（带3秒超时）
+  // 初始化：快速检测API是否可达（1.5秒超时）
+  async init() {
+    if (this._ready) return;
+    this._ready = true;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1500);
+      const resp = await fetch(`${this.BASE_URL}/ulist.np/get?fltt=2&fields=f2&secids=1.000001`, {
+        signal: controller.signal,
+        mode: 'cors'
+      });
+      clearTimeout(timer);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      if (!data || !data.data) throw new Error('No data');
+      console.log('API连接正常，使用实时数据');
+    } catch (err) {
+      this._useMock = true;
+      this._mockReason = '接口受限，使用模拟数据';
+      console.log('API不可达，切换到模拟数据:', err.message);
+    }
+  },
+
+  // 通用请求
   async fetch(url, params = {}) {
     if (this._useMock) return null;
     const query = new URLSearchParams(params).toString();
     const fullUrl = query ? `${url}?${query}` : url;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
     try {
-      const resp = await fetch(fullUrl, { signal: controller.signal, mode: 'cors' });
-      clearTimeout(timeout);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const resp = await fetch(fullUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return await resp.json();
     } catch (err) {
-      clearTimeout(timeout);
-      if (err.name === 'TypeError' || err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.name === 'AbortError') {
-        this._useMock = true;
-        this._mockReason = '网络不可用或接口受限';
-      }
-      console.warn('API fetch failed:', url, err.message);
+      this._useMock = true;
+      this._mockReason = '请求失败';
+      console.warn('API fetch failed:', err.message);
       return null;
     }
   },

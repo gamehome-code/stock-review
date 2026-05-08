@@ -7,10 +7,8 @@ const App = {
   modules: {},
 
   async init() {
-    // 注册Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW注册失败:', err));
-    }
+    // 先检测API是否可达（1.5秒快速探测）
+    await API.init();
 
     // 初始化各模块
     this.modules = { Market, Technical, Fundamental, TradeLog, Sentiment };
