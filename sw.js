@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stock-review-v1';
+const CACHE_NAME = 'stock-review-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -31,13 +31,23 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.url.includes('/api/')) {
+  const url = e.request.url;
+  // JS/CSS 文件使用 network-first（确保获取最新版本）
+  if (url.endsWith('.js') || url.endsWith('.css')) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
+      fetch(url).then(resp => {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(url, clone));
+        return resp;
+      }).catch(() => caches.match(url))
     );
+  } else if (url.includes('/api/') || url.includes('eastmoney')) {
+    // API 请求不缓存
+    e.respondWith(fetch(url));
   } else {
+    // 其他资源 cache-first
     e.respondWith(
-      caches.match(e.request).then(r => r || fetch(e.request))
+      caches.match(url).then(r => r || fetch(url))
     );
   }
 });
