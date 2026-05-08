@@ -13,6 +13,17 @@
   <link rel="stylesheet" href="/css/style.css">
   <!-- ECharts -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <script>
+    // 清除旧版Service Worker缓存，确保加载最新代码
+    if ('serviceWorker' in navigator) {
+      caches.keys().then(keys => {
+        keys.forEach(k => { if (k !== 'stock-review-v2') caches.delete(k); });
+      });
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.update();
+      });
+    }
+  </script>
 </head>
 <body>
 
