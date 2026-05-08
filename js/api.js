@@ -8,18 +8,36 @@ const API = {
   BASE_URL: 'https://push2.eastmoney.com/api/qt',
   DATA_URL: 'https://datacenter-web.eastmoney.com/api/data/v1/get',
 
-  // 通用请求
+  // 是否强制使用mock数据（首次CORS失败后自动标记）
+  _useMock: false,
+  _mockReason: '',
+
+  // 通用请求（带3秒超时）
   async fetch(url, params = {}) {
+    if (this._useMock) return null;
     const query = new URLSearchParams(params).toString();
     const fullUrl = query ? `${url}?${query}` : url;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
     try {
-      const resp = await fetch(fullUrl);
+      const resp = await fetch(fullUrl, { signal: controller.signal, mode: 'cors' });
+      clearTimeout(timeout);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       return await resp.json();
     } catch (err) {
+      clearTimeout(timeout);
+      if (err.name === 'TypeError' || err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.name === 'AbortError') {
+        this._useMock = true;
+        this._mockReason = '网络不可用或接口受限';
+      }
       console.warn('API fetch failed:', url, err.message);
       return null;
     }
+  },
+
+  // 获取数据源状态
+  getDataSourceLabel() {
+    return this._useMock ? `📊 模拟数据（${this._mockReason}）` : '📡 实时数据';
   },
 
   // ===== 大盘指数 =====
@@ -159,7 +177,7 @@ const API = {
     };
   },
   _mockQuote(secid) {
-    const code = secid.split('.')[1];
+    const code = secid ? secid.split('.')[1] : '600519';
     const names = {'600519':'贵州茅台','000858':'五粮液','300750':'宁德时代','601318':'中国平安','000001':'上证指数'};
     return {
       code, name: names[code] || '示例股票',
