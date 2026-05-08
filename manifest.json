@@ -1,0 +1,22 @@
+{
+  "name": "A股复盘助手",
+  "short_name": "复盘助手",
+  "description": "A股股票复盘工具 - 行情回顾、技术分析、基本面分析、交易日志、全球情绪",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#1a73e8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
